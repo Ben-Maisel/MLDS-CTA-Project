@@ -30,6 +30,11 @@ def root():
         )
     return FileResponse(str(INDEX_HTML))
 
+@app.get("/cta_routes.json")
+async def get_cta_routes():
+    # cta_routes.json is in the same directory as index.html inside the image (/app)
+    return FileResponse("cta_routes.json", media_type="application/json")
+
 
 @app.get("/latest")
 def latest():

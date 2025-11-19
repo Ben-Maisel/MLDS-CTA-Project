@@ -18,6 +18,11 @@ This project continuously polls the CTA API, stores train positions in a SQLite 
 MLDS-CTA-Project/
 ├── assets/ # Gifs used in the README are stored here
 │
+├── shape_files/ # files with geographic information on train track locations
+│
+├── scripts/
+│   ├── make_cta_routes_json.py # converts shape files to json for usability
+│
 ├── src/
 │   ├── extract_data.py        # Polls CTA API & stores positions into SQLite
 │   ├── server_fastapi.py      # FastAPI server + /latest endpoint
@@ -27,6 +32,7 @@ MLDS-CTA-Project/
 ├── Dockerfile                 # Container build configuration
 ├── requirements.txt           # Python dependencies
 ├── index.html                 # Interactive Leaflet map
+├── cta_routes.json            # Json with Info of Track Coordiantes
 ├── CODEOWNERS                 # Collaboration rules
 └── README.md                  # You're reading this
 ```
