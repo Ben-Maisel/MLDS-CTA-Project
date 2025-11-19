@@ -3,7 +3,13 @@ import time
 import json            # IMPORT LIBRARIES
 import sqlite3
 import requests
+import math
 from datetime import datetime, timezone
+from pathlib import Path
+from shapely.geometry import Point, shape
+from shapely.ops import nearest_points
+
+ENABLE_DEBUG = os.getenv("ENABLE_DEBUG", "0") == "1"
 
 API_KEY = os.getenv("CTA_TRAIN_API_KEY") # FETCH API KEY 
 if not API_KEY:
@@ -24,6 +30,49 @@ ROUTES = { # MAPPING OF ALL ROUTES
     "Pink": "pink",
     "Y":    "y",
 }
+
+# Fixing the problem of train veering off the route
+# --- Load GeoJSON ---
+GEOJSON_PATH = Path("cta_routes.geojson")
+if not GEOJSON_PATH.exists():
+    raise SystemExit(f"GeoJSON file not found at {GEOJSON_PATH}. Download from City of Chicago Data Portal.")
+
+with open(GEOJSON_PATH, "r", encoding="utf-8") as f:
+    geojson_data = json.load(f)
+
+# make geojson route names correpond with our route names
+NAME_MAP = {
+    "Red": "red",
+    "Blue": "blue",
+    "Brown": "brn",
+    "Green": "g",
+    "Orange": "org",
+    "Purple": "p",
+    "Pink": "pink",
+    "Yellow": "y"
+}
+
+
+route_geometries = {short: None for short in NAME_MAP.values()}
+
+for feature in geojson_data.get("features", []):
+    props = feature.get("properties", {})
+    lines = props.get("lines", "")
+    geom = shape(feature.get("geometry"))
+    if lines and geom:
+        for route_name in lines.split(","):
+            route_name = route_name.strip()
+            short_name = NAME_MAP.get(route_name)
+            if short_name:
+                if route_geometries[short_name] is None:
+                    route_geometries[short_name] = geom
+                else:
+                    route_geometries[short_name] = route_geometries[short_name].union(geom)
+
+
+for k,v in route_geometries.items():
+    print(f"[DEBUG] Route {k}: geometry type={v.geom_type if v else 'None'}")
+
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS {table} (
@@ -46,6 +95,44 @@ def ensure_db(conn: sqlite3.Connection): # CONNECT TO THE DB AND CREATE THE TABL
         for t in ROUTES.values():
             conn.executescript(SCHEMA_SQL.format(table=t))
 
+
+# --- Filtering & Snapping ---
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371000
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    return 2 * R * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+def filter_and_snap(route_code: str, lat: float, lon: float):
+    geoms = route_geometries.get(route_code.lower())
+    if not geoms:
+        #original coordinate 
+        return lat, lon
+
+    point = Point(lon, lat)
+    buffer_distance = 0.0003  # ~3m
+    closest_geom = None
+    min_distance = float("inf")
+
+    if geoms.geom_type == "MultiLineString":
+        for line in geoms.geoms:
+            dist = point.distance(line)
+            if dist < min_distance:
+                min_distance = dist
+                closest_geom = line
+    else:
+        closest_geom = geoms
+        min_distance = point.distance(geoms)
+
+    if min_distance <= buffer_distance:
+        return lat, lon
+
+    nearest_point = closest_geom.interpolate(closest_geom.project(point))
+    return nearest_point.y, nearest_point.x
+
+
 def fetch_route_positions(route_code: str) -> list[dict]: # FETCH THE DATA
     """Fetch live positions for a single CTA route; returns normalized dicts."""
     params = {"key": API_KEY, "rt": route_code, "outputType": "JSON"}
@@ -65,22 +152,34 @@ def fetch_route_positions(route_code: str) -> list[dict]: # FETCH THE DATA
         return []
 
     out = []
+    
     for block in ctatt.get("route", []):
         for t in block.get("train", []) or []:
             try:
+                lat = float(t["lat"]) if t.get("lat") else None
+                lon = float(t["lon"]) if t.get("lon") else None
+                print(f"[DEBUG] Raw: route={route_code}, rn={t.get('rn')}, lat={lat}, lon={lon}, heading={t.get('heading')}")
+
+                # snap for lat and lon
+                if lat and lon:
+                    lat, lon = filter_and_snap(route_code, lat, lon)
+                
+                if ENABLE_DEBUG:
+                    print(f"[DEBUG] After snap: lat={lat}, lon={lon}")
+
                 out.append({
                     "rn": t.get("rn"),
                     "next_station": t.get("nextStaNm"),
-                    "lat": float(t["lat"]) if t.get("lat") else None,
-                    "lon": float(t["lon"]) if t.get("lon") else None,
+                    "lat": lat,
+                    "lon": lon,
                     "heading": int(t["heading"]) if t.get("heading") else None,
                     "arriving_now": 1 if t.get("isApp") == "1" else 0,
                     "delayed": 1 if t.get("isDly") == "1" else 0,
                 })
             except (ValueError, TypeError):
-                # Skip malformed rows without crashing the whole poll
                 continue
     return out
+
  
 def insert_snapshot(conn: sqlite3.Connection, table: str, ts_iso: str, rows: list[dict]):
     if not rows:                     # STICK DATA IN DATABASE

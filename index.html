@@ -24,8 +24,8 @@
 // --- configuration ---
 const POLL_MS = 30_000;          // poll interval (ms)
 const CORRECT_MS = 1200;         // correction ease duration after each poll
-const MAX_DRIFT_METERS = 500;    // if predicted too far from truth, snap instead
-const FALLBACK_SPEED = 10;       // m/s (~22 mph) if position unchanged
+const MAX_DRIFT_METERS = 100;    // if predicted too far from truth, snap instead(500 to 100)
+const FALLBACK_SPEED = 5;       // m/s (~22 mph) if position unchanged(10 to 5)
 const MIN_SPEED = 0.5;           // below this, treat as stopped
 
 // Route colors + canonical route keys (must match your DB tables: red, blue, brn, g, org, p, pink, y)
@@ -152,6 +152,7 @@ async function poll(){
     const color = colorByRoute[route] || '#000';
     const truth = {lat:+r.lat, lon:+r.lon, tsPoll};
     const heading = r.heading != null ? +r.heading : null;
+    console.log(`Front-end using: ${r.lat}, ${r.lon}`);
 
     // Ensure a group exists for this route (it will; created above)
     const group = groups.get(route);
