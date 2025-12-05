@@ -108,6 +108,42 @@ Smooth motion between updates
 
 Popups showing speed, heading, next station, delayed status, etc.
 
+# Run the EDA Analysis Python File
+1. Ensure you have collected some data:
+(1)Set your CTA API key:
+```
+export CTA_TRAIN_API_KEY="YOUR_KEY"
+```
+
+(2)Run the data extractor for a few minutes:
+```
+python src/extract_data.py
+```
+This will populate cta_trains.db with live train positions.
+Stop the script when ready by pressing CTRL+C in the terminal.
+This will safely close the database connection.
+
+(3)Run the EDA script:
+```
+python scripts/eda_analysis.py
+```
+
+Output
+(1)Summary statistics printed in the terminal:
+Number of rows per route
+Missing values
+Average and max speed per route
+
+(2)Visualizations saved in:
+```
+assets/eda_plots/
+```
+
+Includes:
+{route}_timestamp_distribution.png
+{route}_positions.png
+all_routes_speed_distribution.png
+
 # Stopping the container
 ![Stop Demo](assets/stopping.gif)
 Press CTRL+C in the terminal.
