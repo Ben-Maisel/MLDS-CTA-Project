@@ -16,7 +16,10 @@ This project continuously polls the CTA API, stores train positions in a SQLite 
 # Project Structure
 ```
 MLDS-CTA-Project/
-├── assets/ # Gifs used in the README are stored here
+├── EDA/    
+│   ├── eda_analysis.py        # EDA python file visualizing all_routes_speed_distribution
+│   ├── eda_plots              # graphs of EDA plots are stored here
+├── assets/                    # Gifs used in the README are stored here
 │
 ├── src/
 │   ├── extract_data.py        # Polls CTA API & stores positions into SQLite
@@ -125,7 +128,7 @@ This will safely close the database connection.
 
 (3)Run the EDA script:
 ```
-python scripts/eda_analysis.py
+python EDA/eda_analysis.py
 ```
 
 Output
@@ -136,7 +139,7 @@ Average and max speed per route
 
 (2)Visualizations saved in:
 ```
-assets/eda_plots/
+EDA/eda_plots/
 ```
 
 Includes:

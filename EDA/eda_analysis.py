@@ -10,7 +10,7 @@ from math import radians, sin, cos, sqrt, atan2
 # --- Paths ---
 PROJECT_ROOT = Path(__file__).resolve().parents[1]  # one level up from scripts/
 DB_PATH = PROJECT_ROOT / "cta_trains.db"
-PLOT_DIR = PROJECT_ROOT / "assets" / "eda_plots"
+PLOT_DIR = PROJECT_ROOT / "EDA" / "eda_plots" # modify from PLOT_DIR = PROJECT_ROOT / "assets" / "eda_plots"
 PLOT_DIR.mkdir(parents=True, exist_ok=True)
 
 ROUTE_TABLES = ["red", "blue", "brn", "g", "org", "p", "pink", "y"]
