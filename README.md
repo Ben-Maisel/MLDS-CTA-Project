@@ -16,12 +16,10 @@ This project continuously polls the CTA API, stores train positions in a SQLite 
 # Project Structure
 ```
 MLDS-CTA-Project/
-├── assets/ # Gifs used in the README are stored here
-│
-├── shape_files/ # files with geographic information on train track locations
-│
-├── scripts/
-│   ├── make_cta_routes_json.py # converts shape files to json for usability
+├── EDA/    
+│   ├── eda_analysis.py        # EDA python file visualizing all_routes_speed_distribution
+│   ├── eda_plots              # graphs of EDA plots are stored here
+├── assets/                    # Gifs used in the README are stored here
 │
 ├── src/
 │   ├── extract_data.py        # Polls CTA API & stores positions into SQLite
@@ -32,7 +30,6 @@ MLDS-CTA-Project/
 ├── Dockerfile                 # Container build configuration
 ├── requirements.txt           # Python dependencies
 ├── index.html                 # Interactive Leaflet map
-├── cta_routes.json            # Json with Info of Track Coordiantes
 ├── CODEOWNERS                 # Collaboration rules
 └── README.md                  # You're reading this
 ```
@@ -113,6 +110,42 @@ Every train as a colored dot
 Smooth motion between updates
 
 Popups showing speed, heading, next station, delayed status, etc.
+
+# Run the EDA Analysis Python File
+1. Ensure you have collected some data:
+(1)Set your CTA API key:
+```
+export CTA_TRAIN_API_KEY="YOUR_KEY"
+```
+
+(2)Run the data extractor for a few minutes:
+```
+python src/extract_data.py
+```
+This will populate cta_trains.db with live train positions.
+Stop the script when ready by pressing CTRL+C in the terminal.
+This will safely close the database connection.
+
+(3)Run the EDA script:
+```
+python EDA/eda_analysis.py
+```
+
+Output
+(1)Summary statistics printed in the terminal:
+Number of rows per route
+Missing values
+Average and max speed per route
+
+(2)Visualizations saved in:
+```
+EDA/eda_plots/
+```
+
+Includes:
+{route}_timestamp_distribution.png
+{route}_positions.png
+all_routes_speed_distribution.png
 
 # Stopping the container
 ![Stop Demo](assets/stopping.gif)
